@@ -7,6 +7,13 @@ export enum TitanVerdict {
   DESTROY = "💀 TERMINATE (DESTROY)"
 }
 
+export interface EmpireAudit {
+  liquidCash: number;
+  monthlyBurn: number;
+  oneSkill: string;
+  mentalBlock: string;
+}
+
 export interface StockData {
   ticker: string;
   name?: string;
@@ -15,16 +22,11 @@ export interface StockData {
   nav: number; // Net Asset Value
   debt: number;
   nocfps?: number; // Net Operating Cash Flow Per Share
-  dividendPercent?: number; // Cash Div % (e.g., 200%)
+  dividendPercent?: number; // Cash Div %
   dividendYield?: number; // %
   directorHolding: number; // % (Sponsor Holding)
   foreignHolding?: number; // %
-  instituteHolding?: number; // %
-  publicHolding?: number; // %
-  marketCap?: number; // Million
   category?: string; // A, B, G, N, Z
-  freeFloat?: number; // Million shares
-  reserveSurplus?: number; // Million
   roe?: number;
   pe?: number;
   debtToEquity?: number;
@@ -40,5 +42,5 @@ export interface TitanAnalysis {
   firstPrinciplesReasoning: string;
   redFlags: string[];
   banglaAdvice: string;
-  lossPreventionFirewall: boolean; // True if passed safety checks
+  lossPreventionFirewall: boolean; 
 }

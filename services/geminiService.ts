@@ -5,45 +5,44 @@ import { StockData, TitanAnalysis, TitanVerdict } from "../types";
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
 
 /**
- * TITAN-X BATCH FORENSIC ENGINE v7.0
- * Strictly implements the "TITAN Master Checklist":
- * - 50 Pts: Zero Debt (Safety First)
- * - 30 Pts: Monopoly/Moat (Survival)
- * - 20 Pts: P/E < 10 (Value)
+ * TITAN-X BATCH FORENSIC ENGINE v8.0 - DOMINATOR MODE
+ * 
+ * Logic Weightage:
+ * - 50 Pts: Zero Debt (Safety)
+ * - 30 Pts: Monopoly/Oligopoly Moat (Business Quality)
+ * - 20 Pts: P/E < 10 (Valuation)
  * 
  * Firewall Protocol:
- * - Sponsor < 15%: DESTROY
- * - Category 'Z': DESTROY
- * - EPS <= 0: DESTROY
- * - Debt/Equity > 1.0: DESTROY
+ * - Category 'Z' -> Auto-Destroy
+ * - Sponsor < 15% -> Auto-Destroy
+ * - Debt/Equity > 1.0 -> Auto-Destroy
+ * - EPS <= 0 -> Auto-Destroy
  */
 export async function analyzeStocksWithGemini(stocks: StockData[]): Promise<TitanAnalysis[]> {
-  const systemInstruction = `You are TITAN-X, the world's most advanced Quantitative Fund Manager.
-  Persona: Brutal Critic, Fiduciary Guardian (protecting 30 Lakh BDT life savings), First-Principles Thinker.
+  const systemInstruction = `You are TITAN, the Grand Strategist and Empire Architect. 
+  You use Elon Musk's First Principles, Warren Buffett's Margin of Safety, and Sun Tzu's Strategic Victory.
   
-  Guidelines for Decision:
+  Persona: Brutal Critic. If a stock is trash, destroy it. Protect the capital at all costs.
+  
+  Checklist:
   - P/E < 15 is 'Sosta', P/E > 25 is 'Dami'.
-  - Sponsor Holding MUST be > 30% for trust.
-  - Foreign/Institute holding is a sign of 'Institutional Trust'.
-  - ROE > 15% is efficient.
-  - Category Z (Junk) must be DESTROYED immediately.
-  
-  Bengali Context: You are speaking to someone going to the USA, needing 'Buy and Forget' stocks.
-  Target 'Hira' (Gems) like BATBC, Jamuna Oil, GP.`;
+  - Sponsor Holding MUST be > 30% for 'God Mode'.
+  - Category Z is an instant terminal failure.
+  - No Emotion. Protect the user's life savings for their USA journey.`;
 
   const prompt = `
     AUDIT TARGET LIST:
     ${stocks.map(s => `
-      Ticker: ${s.ticker} | Category: ${s.category || 'A'} | LTP: ${s.ltp} | EPS: ${s.eps} | NAV: ${s.nav} | Debt: ${s.debt} | Sponsor%: ${s.directorHolding}% | Foreign%: ${s.foreignHolding || 0}% | Div%: ${s.dividendPercent}% | NOCFPS: ${s.nocfps || 'N/A'}
+      Ticker: ${s.ticker} | Category: ${s.category || 'A'} | LTP: ${s.ltp} | EPS: ${s.eps} | NAV: ${s.nav} | Debt: ${s.debt} | Sponsor%: ${s.directorHolding}% | Div%: ${s.dividendPercent}% | NOCFPS: ${s.nocfps || 'N/A'}
     `).join('\n')}
     
     TASK:
-    Analyze line-by-line. For each stock, provide:
-    1. Moat Type (Monopoly, Oligopoly, or Commodity).
-    2. isMonopoly (Boolean).
-    3. Reasoning: Why this stock survives for 10 years (First Principles).
-    4. Risk Grade (1-10, where 10 is Gambling).
-    5. Bangla Advice: Brutal 1-line verdict based on the checklist.
+    Analyze line-by-line using First Principles. 
+    1. moatType: Monopoly, Oligopoly, or Commodity.
+    2. isMonopoly: Boolean.
+    3. reasoning: A "First Principles" explanation for why this survives 10 years.
+    4. riskGrade: 1-10 (1 is Swiss Bank, 10 is Gambling).
+    5. banglaAdvice: A brutal one-line command in Bengali.
   `;
 
   const response = await ai.models.generateContent({
@@ -74,9 +73,9 @@ export async function analyzeStocksWithGemini(stocks: StockData[]): Promise<Tita
   const aiResults = JSON.parse(response.text || "[]");
   
   return stocks.map((stock, index) => {
-    const aiData = aiResults[index] || { moatType: "Unknown", isMonopoly: false, reasoning: "N/A", riskGrade: 5, banglaAdvice: "Audit Error." };
+    const aiData = aiResults[index] || { moatType: "Unknown", isMonopoly: false, reasoning: "Audit compromised.", riskGrade: 10, banglaAdvice: "বিপদজনক শেয়ার।" };
     
-    // 1. Data Sanitization & Auto-Calculations
+    // Auto-Sanitization
     const ltp = stock.ltp || 0;
     const eps = stock.eps || 0;
     const nav = stock.nav || 1;
@@ -86,50 +85,48 @@ export async function analyzeStocksWithGemini(stocks: StockData[]): Promise<Tita
     
     const pe = eps > 0 ? ltp / eps : 999;
     const roe = (eps / nav) * 100;
-    // BD Dividend Calc: (FaceValue 10 * Div%) / LTP
     const divYield = stock.dividendPercent ? (10 * (stock.dividendPercent / 100) * 100) / ltp : (stock.dividendYield || 0);
     const debtToEquity = debt / nav;
 
-    // 2. THE TITAN GOD-MODE FIREWALL (DETERMINISTIC)
+    // TITAN FIREWALLS (TERMINAL OVERRIDES)
     let score = 0;
     let firewallPassed = true;
     const redFlags: string[] = [];
 
     if (category === 'Z') {
       firewallPassed = false;
-      redFlags.push("JUNK STATUS: Z Category detected. Never touch gambling assets.");
+      redFlags.push("TERMINAL ERROR: Z Category Asset. This is a scam trap.");
     }
-    
     if (sponsor < 15) {
       firewallPassed = false;
-      redFlags.push("TERMINAL OWNERSHIP: Sponsor < 15%. This is a public dumping ground.");
+      redFlags.push("OWNERSHIP FAILURE: Sponsor < 15%. Public dump detected.");
     }
-
     if (debtToEquity > 1.0) {
       firewallPassed = false;
-      redFlags.push("DEBT TRAP: Liabilities exceed Net Asset value. Lethal risk.");
+      redFlags.push("DEBT OVERLOAD: Company belongs to the lenders. Bankruptcy risk.");
     }
-
     if (eps <= 0) {
       firewallPassed = false;
-      redFlags.push("CASH BURNER: Negative or zero EPS. This company destroys capital.");
+      redFlags.push("ZERO PROFIT: Capital destroyer. No income generation.");
+    }
+    if (stock.nocfps && stock.nocfps <= 0 && eps > 0) {
+      redFlags.push("FRAUD RISK: Positive EPS but negative Cash Flow (NOCFPS).");
     }
 
-    // 3. TITAN SCORING ENGINE (50-30-20 WEIGHTING)
+    // SCORING ENGINE (50-30-20 WEIGHTING)
     if (firewallPassed) {
-      // 50 Points: Zero Debt
+      // 50 Points: Debt
       if (debt === 0) score += 50;
-      else if (debtToEquity < 0.3) score += 20;
+      else if (debtToEquity < 0.2) score += 20;
 
-      // 30 Points: Monopoly
+      // 30 Points: Moat
       if (aiData.isMonopoly) score += 30;
 
-      // 20 Points: P/E < 10
+      // 20 Points: Value
       if (pe < 10) score += 20;
       else if (pe < 15) score += 10;
     }
 
-    // 4. VERDICT
     let verdict = TitanVerdict.AVOID;
     if (!firewallPassed) {
       verdict = TitanVerdict.DESTROY;
@@ -160,18 +157,14 @@ export async function analyzeStocksWithGemini(stocks: StockData[]): Promise<Tita
 }
 
 /**
- * FULL SUITE DATA EXTRACTOR
+ * DEEP DATA EXTRACTION (Gemini Flash)
  */
 export async function parseRawFiles(fileData: string, mimeType: string, isText: boolean): Promise<StockData[]> {
     const prompt = `
-        TITAN FORENSIC DATA PARSER:
-        Extract every Stock from the data. 
-        Fields: ticker, category (A/B/Z/N), ltp, eps, nav, debt, directorHolding (sponsor %), foreignHolding (%), dividendPercent (%), nocfps, marketCap, freeFloat, reserveSurplus.
-        
-        Rules:
-        1. Auto-fill defaults (e.g. Nav 10) if missing.
-        2. Clean numeric strings (remove commas, %).
-        3. Return JSON array.
+        TITAN FORENSIC SCANNER:
+        Extract metrics from this stock data: ticker, category (A/B/Z), ltp, eps, nav, debt, directorHolding (sponsor %), foreignHolding (%), dividendPercent (%), nocfps.
+        - Return strictly a JSON array.
+        - Clean all numbers (remove commas/symbols).
     `;
 
     const contents: any = isText 
@@ -197,10 +190,7 @@ export async function parseRawFiles(fileData: string, mimeType: string, isText: 
                         directorHolding: { type: Type.NUMBER },
                         foreignHolding: { type: Type.NUMBER },
                         dividendPercent: { type: Type.NUMBER },
-                        nocfps: { type: Type.NUMBER },
-                        marketCap: { type: Type.NUMBER },
-                        freeFloat: { type: Type.NUMBER },
-                        reserveSurplus: { type: Type.NUMBER }
+                        nocfps: { type: Type.NUMBER }
                     },
                     required: ["ticker", "ltp", "eps"]
                 }
