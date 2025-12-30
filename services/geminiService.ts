@@ -5,34 +5,38 @@ import { StockData, TitanAnalysis, TitanVerdict } from "../types";
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
 
 /**
- * TITAN-X BATCH FORENSIC ENGINE
- * Analyzes multiple stocks in one call to optimize quota and speed.
- * Strictly enforces Capital Preservation Firewall.
+ * TITAN-X BATCH FORENSIC ENGINE v5.0
+ * Implements strict GOD-MODE weighting:
+ * - 50 Pts: Zero Debt
+ * - 30 Pts: Monopoly/Moat
+ * - 20 Pts: P/E < 10
+ * Total 100. Score 80+ = GOD-MODE BUY.
  */
 export async function analyzeStocksWithGemini(stocks: StockData[]): Promise<TitanAnalysis[]> {
-  const systemInstruction = `You are TITAN-X, a brutal Quantitative Fiduciary. 
-  Persona: Elon Musk + Warren Buffett + Swiss Private Banker.
-  Instruction: 
-  - Evaluate Monopoly/Oligopoly status (30 points weight).
-  - Risk Grade: 1 (Safe) to 10 (Gambling).
-  - Provide a "First Principles" survival explanation for 10 years.
-  - Provide a brutal 1-line Bengali advice for each stock.
-  - BE A BRUTAL CRITIC. If a stock has high debt or low governance, you must suggest DESTROY.
-  - You must return an array of analysis objects matching the input order.`;
+  const systemInstruction = `You are TITAN-X, the world's most advanced Quantitative Fund Manager.
+  Persona: Brutal Critic, Fiduciary Guardian, First-Principles Thinker.
+  Mission: Find Wealth Compounders, Destroy Capital Destroyers.
+  
+  Logic Checklist:
+  1. Moat Audit: Analyze if business is a Monopoly/Oligopoly.
+  2. Financial Forensic: Efficiency (ROE > 15%), Safety (Debt/Equity < 0.5), Value (P/E < 15).
+  3. Ownership Integrity: Check Director % and Foreign Institutional trust.
+  
+  Constraint: Be a brutal critic. If a stock has debt or low governance, suggest DESTROY. Protect capital at all costs.`;
 
   const prompt = `
     AUDIT TARGET LIST:
     ${stocks.map(s => `
-      Ticker: ${s.ticker} | Price: ${s.ltp} | EPS: ${s.eps} | NAV: ${s.nav} | Debt: ${s.debt} | Dir%: ${s.directorHolding}%
+      Ticker: ${s.ticker} | LTP: ${s.ltp} | EPS: ${s.eps} | NAV: ${s.nav} | Debt: ${s.debt} | Director%: ${s.directorHolding}% | Div%: ${s.dividendPercent}%
     `).join('\n')}
     
     TASK:
-    For each stock, provide:
+    Analyze line-by-line. For each stock, provide:
     1. Moat Type (Monopoly, Oligopoly, or Commodity).
     2. isMonopoly (Boolean).
-    3. Reasoning (First-principles explaination why it will survive 10 years).
-    4. Risk Grade (1-10, where 10 is pure gambling).
-    5. Bangla Advice (A sharp, one-line verdict in Bengali).
+    3. Reasoning: A "First Principles" explanation for why this stock will survive/thrive for the next 10 years.
+    4. Risk Grade (1-10).
+    5. Bangla Advice: A direct, brutal verdict in Bengali.
   `;
 
   const response = await ai.models.generateContent({
@@ -62,76 +66,72 @@ export async function analyzeStocksWithGemini(stocks: StockData[]): Promise<Tita
 
   const aiResults = JSON.parse(response.text || "[]");
   
-  // MAP AI RESULTS BACK TO STOCK DATA + ENFORCE HARD FIREWALL
   return stocks.map((stock, index) => {
-    const aiData = aiResults[index] || { moatType: "Unknown", isMonopoly: false, reasoning: "N/A", riskGrade: 5, banglaAdvice: "Data missing." };
+    const aiData = aiResults[index] || { moatType: "Unknown", isMonopoly: false, reasoning: "N/A", riskGrade: 5, banglaAdvice: "System Error." };
     
+    // 1. Data Sanitization & Auto-Calculations
     const ltp = stock.ltp || 0;
     const eps = stock.eps || 0;
     const nav = stock.nav || 1;
     const debt = stock.debt || 0;
     const director = stock.directorHolding || 0;
     
+    // Auto-calculate P/E if missing
     const pe = eps !== 0 ? ltp / eps : 999;
-    const roe = nav !== 0 ? (eps / nav) * 100 : 0;
-    const debtToEquity = debt / (nav || 1); 
+    
+    // Auto-calculate ROE
+    const roe = (eps / nav) * 100;
+    
+    // Auto-calculate Yield (Assume Face Value 10 as per DSE standards)
     const divYield = stock.dividendPercent ? (10 * (stock.dividendPercent / 100) * 100) / ltp : (stock.dividendYield || 0);
+    
+    const debtToEquity = debt / nav;
 
+    // 2. THE TITAN GOD-MODE SCORING (STRICT WEIGHTING)
     let score = 0;
     let firewallPassed = true;
     const redFlags: string[] = [];
 
-    // --- LOSS PREVENTION FIREWALL (STRICT DETERMINISTIC RULES) ---
-    
-    // RULE 1: DEBT LIMIT
-    if (debtToEquity > 1.0) {
-      firewallPassed = false;
-      redFlags.push("TERMINAL DEBT: Debt-to-Equity > 1.0. This company is a walking corpse.");
-    }
-    
-    // RULE 2: MINIMUM OWNERSHIP (DIRECTOR HOLDING < 15%)
+    // --- DETERMINISTIC FIREWALL (HARD OVERRIDES) ---
     if (director < 15) {
       firewallPassed = false;
-      redFlags.push("CRITICAL OWNERSHIP FAILURE: Director holding < 15%. This is a shell company trap. Management has zero confidence.");
+      redFlags.push("CRITICAL OWNERSHIP FAILURE: Director holding is below 15%. This is a shell trap. Management has zero skin in the game.");
     }
     
-    // RULE 3: PROFITABILITY
+    if (debtToEquity > 1.0) {
+      firewallPassed = false;
+      redFlags.push("TERMINAL DEBT: Debt exceeds Net Assets. This company belongs to the bank, not you.");
+    }
+    
     if (eps <= 0) {
       firewallPassed = false;
-      redFlags.push("NEGATIVE EPS: Company is losing money every second. Capital destroyer.");
+      redFlags.push("ZERO PROFITABILITY: Negative or zero EPS. Pure capital destruction.");
     }
 
-    // Scoring Logic
-    if (firewallPassed) {
-      // 1. Efficiency
-      if (roe > 15) score += 20;
-      
-      // 2. Safety (Debt)
-      if (debt === 0) score += 30;
-      else if (debtToEquity < 0.3) score += 15;
-      
-      // 3. Value
-      if (pe < 10) score += 20;
-      else if (pe < 15) score += 10;
-      
-      // 4. Moat
-      if (aiData.isMonopoly) score += 30;
-    }
+    // --- WEIGHTED SCORING ENGINE ---
+    // Rule: Debt = 0 (+50 Pts)
+    if (debt === 0) score += 50;
+    
+    // Rule: Monopoly/Moat (+30 Pts)
+    if (aiData.isMonopoly) score += 30;
+    
+    // Rule: P/E < 10 (+20 Pts)
+    if (pe < 10) score += 20;
 
-    if (aiData.additionalFlags) redFlags.push(...aiData.additionalFlags);
-
-    // FINAL VERDICT DETERMINATION
+    // 3. VERDICT ENGINE
     let verdict = TitanVerdict.AVOID;
     if (!firewallPassed) {
       verdict = TitanVerdict.DESTROY;
-      score = Math.min(score, 10); // Massive score penalty for safety breach
-    } else if (score >= 80 && divYield >= 7 && director >= 30) {
+      score = 0; // Destroyed assets carry zero value
+    } else if (score >= 80) {
       verdict = TitanVerdict.GOD_MODE_BUY;
-    } else if (score >= 60) {
+    } else if (score >= 50) {
       verdict = TitanVerdict.BUY;
-    } else if (score >= 40) {
+    } else if (score >= 30) {
       verdict = TitanVerdict.HOLD;
     }
+
+    if (aiData.additionalFlags) redFlags.push(...aiData.additionalFlags);
 
     return {
       stock: { ...stock, pe, roe, dividendYield: divYield, debtToEquity },
@@ -149,16 +149,15 @@ export async function analyzeStocksWithGemini(stocks: StockData[]): Promise<Tita
 }
 
 /**
- * DEEP SCANNER: Multimodal extraction from any file format
+ * BATCH SCANNER: Extracts metrics from text/files
  */
 export async function parseRawFiles(fileData: string, mimeType: string, isText: boolean): Promise<StockData[]> {
     const prompt = `
-        TITAN FORENSIC SCAN: 
-        Extract every Stock entry from this ${isText ? 'text data' : 'document'}.
-        Required Fields: ticker, ltp (price), eps, nav, debt, directorHolding (%), dividendPercent (%).
-        Ignore header noise. Focus on line-by-line accuracy. 
-        Note: If a value like 'Sponsor/Director' is shown as a percentage, extract only the number.
-        Return JSON array.
+        TITAN FORENSIC DATA PARSER:
+        Extract every Stock from this data.
+        Fields: ticker, ltp (current price), eps, nav, debt, directorHolding (%), dividendPercent (%).
+        If any metric like P/E or Yield is mentioned, focus on the raw EPS and Div% instead.
+        Return strictly a JSON array.
     `;
 
     const contents: any = isText 
