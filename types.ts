@@ -14,10 +14,17 @@ export interface StockData {
   eps: number;
   nav: number; // Net Asset Value
   debt: number;
+  nocfps?: number; // Net Operating Cash Flow Per Share
+  dividendPercent?: number; // Cash Div % (e.g., 200%)
   dividendYield?: number; // %
-  dividendPercent?: number; // %
-  sector?: string;
-  directorHolding: number; // %
+  directorHolding: number; // % (Sponsor Holding)
+  foreignHolding?: number; // %
+  instituteHolding?: number; // %
+  publicHolding?: number; // %
+  marketCap?: number; // Million
+  category?: string; // A, B, G, N, Z
+  freeFloat?: number; // Million shares
+  reserveSurplus?: number; // Million
   roe?: number;
   pe?: number;
   debtToEquity?: number;
