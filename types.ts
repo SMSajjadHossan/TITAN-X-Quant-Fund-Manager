@@ -36,11 +36,23 @@ export interface StockData {
 export interface TitanAnalysis {
   stock: StockData;
   score: number;
-  riskGrade: number; // 1 to 10
+  technicalScore: number; 
+  riskGrade: number; 
   verdict: TitanVerdict;
   valuationStatus: "Sosta" | "Dami" | "Fair";
   moatType: string;
   firstPrinciplesReasoning: string;
+  aiCore: {
+    ensembleConfidence: number; // 0-100 (Random Forest simulation)
+    precisionMetric: number; // 0-1.0
+    predictedDirection: "Up" | "Down" | "Sideways";
+    signals: number[]; // 1 for Buy, 0 for Wait/Sell (last 10 periods)
+  };
+  technicalStatus: {
+    rsi: "Oversold" | "Neutral" | "Overbought";
+    trend: "Bullish" | "Bearish" | "Stagnant";
+    strength: string;
+  };
   redFlags: string[];
   banglaAdvice: string;
   lossPreventionFirewall: boolean; 
