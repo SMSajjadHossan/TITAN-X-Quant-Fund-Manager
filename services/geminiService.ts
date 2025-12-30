@@ -5,97 +5,109 @@ import { StockData, TitanAnalysis, TitanVerdict } from "../types";
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
 
 export async function analyzeStockWithGemini(stock: StockData): Promise<TitanAnalysis> {
-  // Quantitative logic (Local)
-  let pe = stock.pe || (stock.eps !== 0 ? stock.ltp / stock.eps : 0);
-  let roe = stock.roe || (stock.nav !== 0 ? (stock.eps / stock.nav) * 100 : 0);
-  let dte = stock.debtToEquity || (stock.equity && stock.equity !== 0 ? stock.debt / stock.equity : 0.5); // Default if missing
+  // 1. Data Sanitization & Auto-Calculation
+  const ltp = stock.ltp || 0;
+  const eps = stock.eps || 0;
+  const nav = stock.nav || 1;
+  const debt = stock.debt || 0;
   
+  const pe = stock.pe || (eps !== 0 ? ltp / eps : 999);
+  const roe = stock.roe || (nav !== 0 ? (eps / nav) * 100 : 0);
+  
+  // Calculate Yield: (Face Value * Dividend %) / LTP
+  const faceValue = stock.faceValue || 10;
+  const divYield = stock.dividendYield || (stock.dividendPercent ? (faceValue * (stock.dividendPercent / 100) * 100) / ltp : 0);
+
+  // 2. Strict Weighting Protocol
   let score = 0;
-  if (dte === 0) score += 50;
-  else if (dte < 0.5) score += 20;
   
+  // Weight 1: Debt (50 Points)
+  if (debt === 0) score += 50;
+  else if (debt < (nav * 0.1)) score += 30; // Very low debt
+  else if (debt < (nav * 0.5)) score += 10;
+  
+  // Weight 2: P/E < 10 (20 Points)
   if (pe < 10) score += 20;
   else if (pe < 15) score += 10;
-  
-  // We'll use Gemini to refine the score and provide reasoning
+
+  // Use Gemini for the "The Moat Audit" (Weight 3: Monopoly = 30 Points)
+  const systemInstruction = `You are TITAN, the world's most advanced Quantitative Fund Manager. 
+  You combine Warren Buffett's margin of safety, Charlie Munger's mental models, and Elon Musk's first-principles thinking.
+  Your mission: Find "Wealth Compounders" and eliminate "Capital Destroyers".
+  Be a brutal critic. If a stock has debt, low governance, or high P/E, destroy it. Protect the capital at all costs.
+  Avoid optimism. Use First Principles Thinking.`;
+
   const prompt = `
-    Analyze this stock data for TITAN-X Quantitative Fund.
+    Analyze this stock for TITAN-X protocol:
     Ticker: ${stock.ticker}
-    Sector: ${stock.sector || 'Unknown'}
-    LTP: ${stock.ltp}
-    EPS: ${stock.eps}
-    NAV: ${stock.nav}
-    Debt: ${stock.debt}
+    LTP: ${ltp} | EPS: ${eps} | NAV: ${nav} | Debt: ${debt}
+    P/E: ${pe.toFixed(2)} | ROE: ${roe.toFixed(2)}% | Div Yield: ${divYield.toFixed(2)}%
     Director Holding: ${stock.directorHolding}%
-    
-    Local Metrics:
-    P/E: ${pe.toFixed(2)}
-    ROE: ${roe.toFixed(2)}%
-    Debt/Equity (Est): ${dte.toFixed(2)}
-    
-    Task:
-    1. Determine the Moat (Monopoly/Oligopoly/Commodity).
-    2. Provide a "First Principles" explanation for why this stock will survive the next 10 years.
-    3. Identify Red Flags (Debt, low governance, etc.).
-    4. Provide a brutal critique. Be a first-principles thinker.
+    Sector: ${stock.sector || 'Unknown'}
+
+    Protocol Requirements:
+    1. Moat Audit: Is this a Monopoly/Oligopoly?
+    2. Ownership Integrity: Is Director % > 30%?
+    3. Financial Forensic: Flag as CRITICAL if Debt/Equity > 1.0.
+    4. 10-Year Survival: Give a "First Principles" explanation.
+    5. Emotional Filter: Give one line of brutal Bengali advice (Bangla).
   `;
 
   const response = await ai.models.generateContent({
     model: "gemini-3-pro-preview",
     contents: prompt,
     config: {
+      systemInstruction,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
         properties: {
           moatType: { type: Type.STRING },
+          isMonopoly: { type: Type.BOOLEAN },
           reasoning: { type: Type.STRING },
           redFlags: { type: Type.ARRAY, items: { type: Type.STRING } },
-          isMonopoly: { type: Type.BOOLEAN },
-          riskGrade: { type: Type.NUMBER },
-          suggestedVerdict: { type: Type.STRING }
+          riskGrade: { type: Type.NUMBER, description: "1-10 scale" },
+          banglaAdvice: { type: Type.STRING }
         },
-        required: ["moatType", "reasoning", "redFlags", "isMonopoly", "riskGrade", "suggestedVerdict"]
+        required: ["moatType", "isMonopoly", "reasoning", "redFlags", "riskGrade", "banglaAdvice"]
       }
     }
   });
 
   const data = JSON.parse(response.text || "{}");
   
-  // Refine local score with AI insights
+  // Final Score refinement
   if (data.isMonopoly) score += 30;
   
+  // Verdict Logic
   let finalVerdict = TitanVerdict.AVOID;
   if (score >= 80) finalVerdict = TitanVerdict.GOD_MODE_BUY;
-  else if (score >= 60) finalVerdict = TitanVerdict.BUY;
+  else if (score >= 60 && divYield >= 7 && stock.directorHolding >= 30) finalVerdict = TitanVerdict.BUY;
   else if (score >= 40) finalVerdict = TitanVerdict.HOLD;
-  else finalVerdict = TitanVerdict.DESTROY;
+  else if (debt > nav) finalVerdict = TitanVerdict.DESTROY;
 
   return {
-    stock: { ...stock, pe, roe, debtToEquity: dte },
+    stock: { ...stock, pe, roe, dividendYield: divYield },
     score,
-    riskGrade: data.riskGrade || 5,
+    riskGrade: data.riskGrade,
     verdict: finalVerdict,
     valuationStatus: pe < 15 ? "Sosta" : pe > 25 ? "Dami" : "Fair",
     moatType: data.moatType,
     firstPrinciplesReasoning: data.reasoning,
-    redFlags: data.redFlags
+    redFlags: data.redFlags,
+    banglaAdvice: data.banglaAdvice
   };
 }
 
 export async function parseRawData(raw: string): Promise<StockData[]> {
     const prompt = `
-        Parse the following raw stock data into a clean JSON array of StockData.
-        Data format might be unstructured. Try to find:
-        - Trading Code/Ticker
-        - LTP (Price)
-        - EPS (Earnings Per Share)
-        - NAV (Net Asset Value)
-        - Debt
-        - Director/Sponsor %
+        Parse this raw data (DSE/Stock reports) into JSON StockData array.
+        Extract: ticker, ltp (price), eps, nav, debt, directorHolding (%), sector.
+        If any value like P/E is missing, ignore it for now as the sanitizer will handle it.
+        Handle multi-line text blocks.
         
-        Raw Data:
-        ${raw.slice(0, 4000)} // Truncate to avoid token limits
+        Raw Content:
+        ${raw.slice(0, 5000)}
     `;
 
     const response = await ai.models.generateContent({
@@ -114,6 +126,7 @@ export async function parseRawData(raw: string): Promise<StockData[]> {
                         nav: { type: Type.NUMBER },
                         debt: { type: Type.NUMBER },
                         directorHolding: { type: Type.NUMBER },
+                        dividendPercent: { type: Type.NUMBER },
                         sector: { type: Type.STRING }
                     },
                     required: ["ticker", "ltp", "eps", "nav", "debt"]

@@ -12,25 +12,30 @@ export interface StockData {
   name?: string;
   ltp: number; // Last Traded Price
   eps: number;
+  prevEps?: number; // For Growth Check
   nav: number; // Net Asset Value
   debt: number;
   equity?: number;
-  dividendYield?: number;
+  dividendYield?: number; // %
+  faceValue?: number; // Default 10
+  dividendPercent?: number; // e.g. 50%
   sector?: string;
-  directorHolding?: number; // %
+  directorHolding: number; // %
   foreignHolding?: number; // %
   roe?: number;
   pe?: number;
   debtToEquity?: number;
+  isMonopoly?: boolean;
 }
 
 export interface TitanAnalysis {
   stock: StockData;
   score: number;
-  riskGrade: number; // 1 to 10
+  riskGrade: number; // 1 (Safe) to 10 (Gambling)
   verdict: TitanVerdict;
-  valuationStatus: "Sosta" | "Fair" | "Dami";
+  valuationStatus: "Sosta" | "Dami" | "Fair";
   moatType: string;
   firstPrinciplesReasoning: string;
   redFlags: string[];
+  banglaAdvice: string;
 }
