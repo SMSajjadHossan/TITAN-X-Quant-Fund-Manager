@@ -1,4 +1,3 @@
-
 export enum TitanVerdict {
   GOD_MODE_BUY = "💎 GOD-MODE BUY",
   BUY = "✅ BUY",
@@ -17,6 +16,7 @@ export interface EmpireAudit {
 export interface StockData {
   ticker: string;
   name?: string;
+  sector?: string;
   ltp: number; // Last Traded Price
   eps: number;
   nav: number; // Net Asset Value
@@ -30,6 +30,7 @@ export interface StockData {
   roe?: number;
   pe?: number;
   debtToEquity?: number;
+  pbRatio?: number;
 }
 
 export interface TitanAnalysis {
@@ -43,4 +44,7 @@ export interface TitanAnalysis {
   redFlags: string[];
   banglaAdvice: string;
   lossPreventionFirewall: boolean; 
+  entryPrice?: number;
+  exitPrice?: number;
+  stopLoss?: number;
 }

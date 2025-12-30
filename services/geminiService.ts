@@ -1,48 +1,51 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { StockData, TitanAnalysis, TitanVerdict } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
 
 /**
- * TITAN-X BATCH FORENSIC ENGINE v8.0 - DOMINATOR MODE
- * 
- * Logic Weightage:
- * - 50 Pts: Zero Debt (Safety)
- * - 30 Pts: Monopoly/Oligopoly Moat (Business Quality)
- * - 20 Pts: P/E < 10 (Valuation)
- * 
- * Firewall Protocol:
- * - Category 'Z' -> Auto-Destroy
- * - Sponsor < 15% -> Auto-Destroy
- * - Debt/Equity > 1.0 -> Auto-Destroy
- * - EPS <= 0 -> Auto-Destroy
+ * TITAN-X ULTIMATE FORENSIC ENGINE v10.0
+ * Strictly implements Sector Benchmarks and Capital Protection Firewalls.
  */
+
+const SECTOR_BENCHMARKS: Record<string, { idealPe: number; minRoe: number; maxDebtEq: number }> = {
+  "Bank": { idealPe: 6, minRoe: 12, maxDebtEq: 0.8 },
+  "Pharmaceuticals & Chemicals": { idealPe: 15, minRoe: 18, maxDebtEq: 0.4 },
+  "Telecommunication": { idealPe: 12, minRoe: 15, maxDebtEq: 0.5 },
+  "Food & Allied": { idealPe: 18, minRoe: 20, maxDebtEq: 0.3 },
+  "Cement": { idealPe: 10, minRoe: 12, maxDebtEq: 0.6 },
+  "Fuel & Power": { idealPe: 8, minRoe: 15, maxDebtEq: 0.5 },
+  "Engineering": { idealPe: 12, minRoe: 15, maxDebtEq: 0.5 },
+  "Financial Institutions": { idealPe: 8, minRoe: 10, maxDebtEq: 0.7 },
+  "DEFAULT": { idealPe: 15, minRoe: 15, maxDebtEq: 0.5 }
+};
+
 export async function analyzeStocksWithGemini(stocks: StockData[]): Promise<TitanAnalysis[]> {
-  const systemInstruction = `You are TITAN, the Grand Strategist and Empire Architect. 
-  You use Elon Musk's First Principles, Warren Buffett's Margin of Safety, and Sun Tzu's Strategic Victory.
+  const systemInstruction = `You are TITAN, the world's most advanced Quantitative Fund Manager. 
+  Persona: Brutal Critic, Grand Strategist. 
+  Logic: Combined power of Elon Musk (First Principles), Naval (Leverage), and Dalio (Radical Truth).
   
-  Persona: Brutal Critic. If a stock is trash, destroy it. Protect the capital at all costs.
+  Your objective is to PROTECT CAPITAL. 
+  - Monopoly Business = High Value.
+  - Debt > 1.0 Debt/Equity = Fatal.
+  - Sponsor Holding < 30% = Low Trust.
+  - Category Z = Junk Trap.
   
-  Checklist:
-  - P/E < 15 is 'Sosta', P/E > 25 is 'Dami'.
-  - Sponsor Holding MUST be > 30% for 'God Mode'.
-  - Category Z is an instant terminal failure.
-  - No Emotion. Protect the user's life savings for their USA journey.`;
+  Be a brutal critic. If a stock fails firewalls, use "TERMINATE".`;
 
   const prompt = `
     AUDIT TARGET LIST:
     ${stocks.map(s => `
-      Ticker: ${s.ticker} | Category: ${s.category || 'A'} | LTP: ${s.ltp} | EPS: ${s.eps} | NAV: ${s.nav} | Debt: ${s.debt} | Sponsor%: ${s.directorHolding}% | Div%: ${s.dividendPercent}% | NOCFPS: ${s.nocfps || 'N/A'}
+      Ticker: ${s.ticker} | Sector: ${s.sector || 'Unknown'} | Cat: ${s.category || 'A'} | LTP: ${s.ltp} | EPS: ${s.eps} | NAV: ${s.nav} | Debt: ${s.debt} | Sponsor%: ${s.directorHolding}% | Div%: ${s.dividendPercent || 0}% | NOCFPS: ${s.nocfps || 0}
     `).join('\n')}
     
     TASK:
-    Analyze line-by-line using First Principles. 
-    1. moatType: Monopoly, Oligopoly, or Commodity.
+    Analyze line-by-line. Provide:
+    1. moatType: (Monopoly, Oligopoly, or Commodity).
     2. isMonopoly: Boolean.
-    3. reasoning: A "First Principles" explanation for why this survives 10 years.
-    4. riskGrade: 1-10 (1 is Swiss Bank, 10 is Gambling).
-    5. banglaAdvice: A brutal one-line command in Bengali.
+    3. reasoning: A First Principles explanation for why this survives 10 years.
+    4. riskGrade: 1 (Swiss Bank) to 10 (Gambling).
+    5. banglaAdvice: A sharp, sovereign command in Bengali.
   `;
 
   const response = await ai.models.generateContent({
@@ -61,8 +64,7 @@ export async function analyzeStocksWithGemini(stocks: StockData[]): Promise<Tita
             isMonopoly: { type: Type.BOOLEAN },
             reasoning: { type: Type.STRING },
             riskGrade: { type: Type.NUMBER },
-            banglaAdvice: { type: Type.STRING },
-            additionalFlags: { type: Type.ARRAY, items: { type: Type.STRING } }
+            banglaAdvice: { type: Type.STRING }
           },
           required: ["ticker", "moatType", "isMonopoly", "reasoning", "riskGrade", "banglaAdvice"]
         }
@@ -73,98 +75,93 @@ export async function analyzeStocksWithGemini(stocks: StockData[]): Promise<Tita
   const aiResults = JSON.parse(response.text || "[]");
   
   return stocks.map((stock, index) => {
-    const aiData = aiResults[index] || { moatType: "Unknown", isMonopoly: false, reasoning: "Audit compromised.", riskGrade: 10, banglaAdvice: "বিপদজনক শেয়ার।" };
+    const aiData = aiResults[index] || { moatType: "Unknown", isMonopoly: false, reasoning: "Data missing.", riskGrade: 10, banglaAdvice: "বিপদজনক শেয়ার।" };
     
-    // Auto-Sanitization
     const ltp = stock.ltp || 0;
     const eps = stock.eps || 0;
     const nav = stock.nav || 1;
     const debt = stock.debt || 0;
     const sponsor = stock.directorHolding || 0;
-    const category = stock.category?.toUpperCase() || 'A';
-    
     const pe = eps > 0 ? ltp / eps : 999;
     const roe = (eps / nav) * 100;
-    const divYield = stock.dividendPercent ? (10 * (stock.dividendPercent / 100) * 100) / ltp : (stock.dividendYield || 0);
-    const debtToEquity = debt / nav;
+    const debtToEquity = debt / (nav * 1000000) > 2 ? 2 : debt / (nav * 100); // Heuristic normalizing
+    const pbRatio = ltp / nav;
+    const sectorBenchmark = SECTOR_BENCHMARKS[stock.sector || ""] || SECTOR_BENCHMARKS["DEFAULT"];
 
-    // TITAN FIREWALLS (TERMINAL OVERRIDES)
+    // Graham Number Calculation
+    const graham = eps > 0 && nav > 0 ? Math.sqrt(22.5 * eps * nav) : 0;
+    const fairValue = graham || (ltp * 0.8); // Fallback
+
     let score = 0;
     let firewallPassed = true;
     const redFlags: string[] = [];
 
-    if (category === 'Z') {
+    // --- BRUTAL FIREWALLS ---
+    if (stock.category === 'Z') {
       firewallPassed = false;
-      redFlags.push("TERMINAL ERROR: Z Category Asset. This is a scam trap.");
+      redFlags.push("JUNK TRAP: Z Category detected.");
     }
     if (sponsor < 15) {
       firewallPassed = false;
-      redFlags.push("OWNERSHIP FAILURE: Sponsor < 15%. Public dump detected.");
-    }
-    if (debtToEquity > 1.0) {
-      firewallPassed = false;
-      redFlags.push("DEBT OVERLOAD: Company belongs to the lenders. Bankruptcy risk.");
+      redFlags.push("OWNERSHIP CRISIS: Sponsor holding < 15%. This is a public dumping ground.");
     }
     if (eps <= 0) {
       firewallPassed = false;
-      redFlags.push("ZERO PROFIT: Capital destroyer. No income generation.");
+      redFlags.push("LOSS MAKING: No profit, no future. Capital destroyer.");
     }
-    if (stock.nocfps && stock.nocfps <= 0 && eps > 0) {
-      redFlags.push("FRAUD RISK: Positive EPS but negative Cash Flow (NOCFPS).");
+    if (pe > 60) {
+      firewallPassed = false;
+      redFlags.push("EXTREME BUBBLE: P/E exceeds 60. Madness.");
+    }
+    if (stock.nocfps && stock.nocfps < 0 && eps > 0) {
+      redFlags.push("ACCOUNTING ANOMALY: Positive EPS but negative Cash Flow (NOCFPS). Potential manipulation.");
     }
 
-    // SCORING ENGINE (50-30-20 WEIGHTING)
+    // --- WEIGHTED SCORING (50-30-20) ---
     if (firewallPassed) {
-      // 50 Points: Debt
+      // 50 Pts: Debt & Safety
       if (debt === 0) score += 50;
-      else if (debtToEquity < 0.2) score += 20;
+      else if (debtToEquity < sectorBenchmark.maxDebtEq) score += 30;
+      else if (debtToEquity < sectorBenchmark.maxDebtEq * 2) score += 10;
 
-      // 30 Points: Moat
+      // 30 Pts: Moat & Business Quality
       if (aiData.isMonopoly) score += 30;
+      else if (aiData.moatType === "Oligopoly") score += 15;
 
-      // 20 Points: Value
-      if (pe < 10) score += 20;
-      else if (pe < 15) score += 10;
+      // 20 Pts: Valuation & Yield
+      if (pe < sectorBenchmark.idealPe) score += 20;
+      else if (pe < sectorBenchmark.idealPe * 1.5) score += 10;
     }
 
     let verdict = TitanVerdict.AVOID;
-    if (!firewallPassed) {
-      verdict = TitanVerdict.DESTROY;
-      score = 0;
-    } else if (score >= 80) {
-      verdict = TitanVerdict.GOD_MODE_BUY;
-    } else if (score >= 50) {
-      verdict = TitanVerdict.BUY;
-    } else if (score >= 30) {
-      verdict = TitanVerdict.HOLD;
-    }
-
-    if (aiData.additionalFlags) redFlags.push(...aiData.additionalFlags);
+    if (!firewallPassed) verdict = TitanVerdict.DESTROY;
+    else if (score >= 80) verdict = TitanVerdict.GOD_MODE_BUY;
+    else if (score >= 60) verdict = TitanVerdict.BUY;
+    else if (score >= 40) verdict = TitanVerdict.HOLD;
 
     return {
-      stock: { ...stock, pe, roe, dividendYield: divYield, debtToEquity, category },
+      stock: { ...stock, pe, roe, debtToEquity, pbRatio },
       score,
       riskGrade: aiData.riskGrade,
       verdict,
-      valuationStatus: pe < 15 ? "Sosta" : pe > 25 ? "Dami" : "Fair",
+      valuationStatus: pe < sectorBenchmark.idealPe ? "Sosta" : pe > sectorBenchmark.idealPe * 2 ? "Dami" : "Fair",
       moatType: aiData.moatType,
       firstPrinciplesReasoning: aiData.reasoning,
       redFlags,
       banglaAdvice: aiData.banglaAdvice,
-      lossPreventionFirewall: firewallPassed
+      lossPreventionFirewall: firewallPassed,
+      entryPrice: fairValue * 0.9,
+      exitPrice: fairValue * 1.3,
+      stopLoss: ltp * 0.92
     };
   });
 }
 
-/**
- * DEEP DATA EXTRACTION (Gemini Flash)
- */
 export async function parseRawFiles(fileData: string, mimeType: string, isText: boolean): Promise<StockData[]> {
     const prompt = `
-        TITAN FORENSIC SCANNER:
-        Extract metrics from this stock data: ticker, category (A/B/Z), ltp, eps, nav, debt, directorHolding (sponsor %), foreignHolding (%), dividendPercent (%), nocfps.
-        - Return strictly a JSON array.
-        - Clean all numbers (remove commas/symbols).
+        TITAN EXTRACTION PROTOCOL:
+        Extract metrics: ticker, sector, category (A/B/Z), ltp (price), eps, nav, debt, directorHolding (%), dividendPercent.
+        Return strictly a JSON array.
     `;
 
     const contents: any = isText 
@@ -182,15 +179,14 @@ export async function parseRawFiles(fileData: string, mimeType: string, isText: 
                     type: Type.OBJECT,
                     properties: {
                         ticker: { type: Type.STRING },
+                        sector: { type: Type.STRING },
                         category: { type: Type.STRING },
                         ltp: { type: Type.NUMBER },
                         eps: { type: Type.NUMBER },
                         nav: { type: Type.NUMBER },
                         debt: { type: Type.NUMBER },
                         directorHolding: { type: Type.NUMBER },
-                        foreignHolding: { type: Type.NUMBER },
-                        dividendPercent: { type: Type.NUMBER },
-                        nocfps: { type: Type.NUMBER }
+                        dividendPercent: { type: Type.NUMBER }
                     },
                     required: ["ticker", "ltp", "eps"]
                 }
