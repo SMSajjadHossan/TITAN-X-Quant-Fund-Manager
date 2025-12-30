@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { TitanAnalysis, TitanVerdict } from './types';
-import { parseRawFiles, analyzeStockWithGemini } from './services/geminiService';
+import { parseRawFiles, analyzeStocksWithGemini } from './services/geminiService';
 
 const App: React.FC = () => {
   const [analyzedStocks, setAnalyzedStocks] = useState<TitanAnalysis[]>([]);
@@ -37,17 +37,17 @@ const App: React.FC = () => {
         throw new Error("No readable stock data found. Verify your file format.");
       }
 
-      const results: TitanAnalysis[] = [];
-      for (let i = 0; i < parsed.length; i++) {
-        setProgress(`Forensic Audit: ${parsed[i].ticker} (${i + 1}/${parsed.length})`);
-        const analysis = await analyzeStockWithGemini(parsed[i]);
-        results.push(analysis);
-      }
+      setProgress(`Auditing ${parsed.length} Assets in Batch Mode...`);
+      const results = await analyzeStocksWithGemini(parsed);
       
       setAnalyzedStocks(results.sort((a, b) => b.score - a.score));
       setCurrentView('results');
     } catch (err: any) {
-      setError("TITAN System Halt: " + err.message);
+      if (err.message?.includes("429") || err.message?.includes("RESOURCE_EXHAUSTED")) {
+        setError("TITAN OVERLOAD: Gemini API rate limit exceeded. Please wait 60 seconds and try again.");
+      } else {
+        setError("TITAN System Halt: " + err.message);
+      }
     } finally {
       setIsProcessing(false);
       setProgress("");
@@ -124,7 +124,7 @@ const App: React.FC = () => {
                   <i className="fas fa-arrow-left"></i> <span>Reset Terminal</span>
                 </button>
                 <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase">Audit Report</h2>
-                <p className="text-[10px] mono text-purple-400 uppercase mt-2">Protocol: Buffett-Musk-Hybrid v3.1</p>
+                <p className="text-[10px] mono text-purple-400 uppercase mt-2">Protocol: Batch-Audit-Optimization v4.0</p>
               </div>
             </div>
 
