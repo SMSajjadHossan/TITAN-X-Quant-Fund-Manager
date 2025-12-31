@@ -10,53 +10,44 @@ export interface EmpireAudit {
   liquidCash: number;
   monthlyBurn: number;
   oneSkill: string;
-  mentalBlock: string;
 }
 
 export interface StockData {
   ticker: string;
-  name?: string;
-  sector?: string;
-  ltp: number; // Last Traded Price
+  ltp: number;
   eps: number;
-  nav: number; // Net Asset Value
+  nav: number;
   debt: number;
-  nocfps?: number; // Net Operating Cash Flow Per Share
-  dividendPercent?: number; // Cash Div %
-  dividendYield?: number; // %
-  directorHolding: number; // % (Sponsor Holding)
-  foreignHolding?: number; // %
-  category?: string; // A, B, G, N, Z
-  roe?: number;
-  pe?: number;
-  debtToEquity?: number;
-  pbRatio?: number;
+  directorHolding: number;
+  dividend?: number; // Added for Yield calculation
+  sector?: string;
+  category?: string;
 }
 
 export interface TitanAnalysis {
   stock: StockData;
   score: number;
-  technicalScore: number; 
-  riskGrade: number; 
   verdict: TitanVerdict;
-  valuationStatus: "Sosta" | "Dami" | "Fair";
   moatType: string;
-  firstPrinciplesReasoning: string;
-  aiCore: {
-    ensembleConfidence: number; // 0-100 (Random Forest simulation)
-    precisionMetric: number; // 0-1.0
-    predictedDirection: "Up" | "Down" | "Sideways";
-    signals: number[]; // 1 for Buy, 0 for Wait/Sell (last 10 periods)
-  };
-  technicalStatus: {
-    rsi: "Oversold" | "Neutral" | "Overbought";
-    trend: "Bullish" | "Bearish" | "Stagnant";
-    strength: string;
-  };
-  redFlags: string[];
+  reasoning: string;
   banglaAdvice: string;
-  lossPreventionFirewall: boolean; 
-  entryPrice?: number;
-  exitPrice?: number;
-  stopLoss?: number;
+  riskGrade: number;
+  redFlags: string[];
+  intrinsicValue: number;
+  fairValue: number;
+  yield: number;
+  allocation: string;
+  bucket: string;
+  debtRisk: "LOW" | "MEDIUM" | "HIGH" | "TOXIC";
+  metrics: {
+    pe: number;
+    roe: number;
+    debtToEquity: number;
+  }
+}
+
+export interface PortfolioStrategy {
+  healthScore: number;
+  directive: string;
+  stance: "Aggressive" | "Neutral" | "Defensive";
 }
