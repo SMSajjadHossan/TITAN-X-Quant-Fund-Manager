@@ -19,7 +19,7 @@ export interface StockData {
   nav: number;
   debt: number;
   directorHolding: number;
-  dividend?: number; // Added for Yield calculation
+  dividend?: number;
   sector?: string;
   category?: string;
 }
