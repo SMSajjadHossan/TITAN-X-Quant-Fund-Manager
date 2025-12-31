@@ -3,7 +3,10 @@ export enum TitanVerdict {
   BUY = "✅ BUY",
   HOLD = "⚖️ HOLD",
   AVOID = "⚠️ AVOID",
-  DESTROY = "💀 TERMINATE (DESTROY)"
+  DESTROY = "💀 TERMINATE (DESTROY)",
+  DEEP_VALUE = "💰 DEEP VALUE BUY",
+  TRAP = "⚠️ TRAIN TRAP (AVOID)",
+  OVERVALUED = "❌ OVERVALUED (SELL)"
 }
 
 export interface EmpireAudit {
@@ -20,8 +23,8 @@ export interface StockData {
   debt: number;
   directorHolding: number;
   dividend?: number;
-  sector?: string;
-  category?: string;
+  revenueGrowth?: number;
+  epsGrowth?: number;
 }
 
 export interface TitanAnalysis {
@@ -39,6 +42,8 @@ export interface TitanAnalysis {
   allocation: string;
   bucket: string;
   debtRisk: "LOW" | "MEDIUM" | "HIGH" | "TOXIC";
+  navDiscount: number;
+  peStatus: string;
   metrics: {
     pe: number;
     roe: number;
